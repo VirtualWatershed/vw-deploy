@@ -59,7 +59,7 @@ services:
       #- /home/docker/vw-auth:/var/www/vw-auth
     depends_on:
       - vwmail
-    command: python manage.py runserver -h 0.0.0.0 -p ${VWAUTH_PORT}
+    command: python manage.py runserver -h 0.0.0.0 -p 5005
   vwmail:
     extends:
       file: ./../docker-compose.yml
