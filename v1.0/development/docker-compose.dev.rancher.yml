@@ -1,0 +1,175 @@
+redis:
+  labels:
+  - io.rancher.container.network=true
+  command:
+  - redis-server
+  - --appendonly
+  - 'yes'
+  image: redis
+  volumes:
+  - /redis:/data
+vwauth:
+  labels:
+  - io.rancher.container.network=true
+  ports:
+  - 5005:80/tcp
+  environment:
+    VWAUTH_HOST: 0.0.0.0
+    VWAUTH_JWT_EXPIRATION_DELTA: '1'
+    VWAUTH_JWT_SECRET_KEY: wcwave
+    VWAUTH_MAIL_PORT: '25'
+    VWAUTH_MAIL_SERVER: vwmail
+    VWAUTH_MAIL_USE_SSL: 'false'
+    VWAUTH_PORT: '80'
+    VWAUTH_SECRET: vwauth
+    VWAUTH_SECURITY_CONFIRMABLE: 'true'
+    VWAUTH_SECURITY_EMAIL_SENDER: welcome@virtualwatershed.org
+    VWAUTH_SECURITY_PASSWORD_HASH: sha512_crypt
+    VWAUTH_SECURITY_PASSWORD_SALT: add_salt
+    VWAUTH_SECURITY_RECOVERABLE: 'true'
+    VWAUTH_SECURITY_REGISTERABLE: 'true'
+    VWAUTH_SQLALCHEMY_DATABASE_URI: sqlite:////vwauthdb/vwauth.db
+    VWAUTH_WTF_CSRF_CHECK_DEFAULT: 'false'
+    VWAUTH_WTF_CSRF_ENABLED: 'false'
+  command:
+  - python
+  - manage.py
+  - runserver
+  - -h
+  - 0.0.0.0
+  - -p
+  - '80'
+  image: virtualwatershed/vw-auth:1.0.0
+  links:
+  - vwmail:vwmail
+  volumes:
+  - /vwauthdb:/vwauthdb
+vwmonitor:
+  labels:
+  - io.rancher.container.network=true
+  ports:
+  - 5555:80/tcp
+  environment:
+    C_FORCE_ROOT: 'true'
+    VWADAPTOR_CELERY_BROKER_URL: redis://redis:6379/0
+    VWADAPTOR_CELERY_RESULT_BACKEND: redis://redis:6379/0
+    VWADAPTOR_ENV: dev
+    VWADAPTOR_HOST: 0.0.0.0
+    VWADAPTOR_JWT_AUTH_HEADER_PREFIX: Bearer
+    VWADAPTOR_JWT_SECRET_KEY: wcwave
+    VWADAPTOR_PORT: '80'
+    VWADAPTOR_SECRET: vwadaptor
+    VWADAPTOR_SQLALCHEMY_DATABASE_URI: sqlite:////vwdb/vwadaptor.db
+    VWADAPTOR_STORAGE_CONTAINER: /vwstorage
+    VWADAPTOR_STORAGE_EXTENSIONS: nc,control
+    VWADAPTOR_STORAGE_KEY: ''''''
+    VWADAPTOR_STORAGE_PROVIDER: LOCAL
+    VWADAPTOR_STORAGE_SECRET: ''''''
+    VWADAPTOR_STORAGE_SERVER: 'true'
+    VWADAPTOR_STORAGE_SERVER_URL: /download
+    VWADAPTOR_USER_DATABASE_URI: sqlite:////vwauthdb/vwauth.db
+  log_driver: ''
+  command:
+  - flower
+  - -A
+  - worker.modelworker
+  - --port=80
+  - --broker=redis://redis:6379/0
+  log_opt: {}
+  image: virtualwatershed/vwadaptor:1.0.0
+  links:
+  - redis:redis
+  volumes:
+  - /storage:/vwstorage
+  - /vwdb:/vwdb
+  - /vwauthdb:/vwauthdb
+vwadaptor:
+  labels:
+  - io.rancher.container.network=true
+  ports:
+  - 5000:80/tcp
+  environment:
+    C_FORCE_ROOT: 'true'
+    VWADAPTOR_CELERY_BROKER_URL: redis://redis:6379/0
+    VWADAPTOR_CELERY_RESULT_BACKEND: redis://redis:6379/0
+    VWADAPTOR_ENV: dev
+    VWADAPTOR_HOST: 0.0.0.0
+    VWADAPTOR_JWT_AUTH_HEADER_PREFIX: Bearer
+    VWADAPTOR_JWT_SECRET_KEY: wcwave
+    VWADAPTOR_PORT: '80'
+    VWADAPTOR_SECRET: vwadaptor
+    VWADAPTOR_SQLALCHEMY_DATABASE_URI: sqlite:////vwdb/vwadaptor.db
+    VWADAPTOR_STORAGE_CONTAINER: /vwstorage
+    VWADAPTOR_STORAGE_EXTENSIONS: nc,control
+    VWADAPTOR_STORAGE_KEY: ''''''
+    VWADAPTOR_STORAGE_PROVIDER: LOCAL
+    VWADAPTOR_STORAGE_SECRET: ''''''
+    VWADAPTOR_STORAGE_SERVER: 'true'
+    VWADAPTOR_STORAGE_SERVER_URL: /download
+    VWADAPTOR_USER_DATABASE_URI: sqlite:////vwauthdb/vwauth.db
+  command:
+  - python
+  - manage.py
+  - runserver
+  - -p
+  - '80'
+  - -h
+  - 0.0.0.0
+  image: virtualwatershed/vwadaptor:1.0.0
+  links:
+  - redis:redis
+  volumes:
+  - /storage:/vwstorage
+  - /vwdb:/vwdb
+  - /vwauthdb:/vwauthdb
+vwworker:
+  labels:
+  - io.rancher.container.network=true
+  environment:
+    C_FORCE_ROOT: 'true'
+    VWADAPTOR_CELERY_BROKER_URL: redis://redis:6379/0
+    VWADAPTOR_CELERY_RESULT_BACKEND: redis://redis:6379/0
+    VWADAPTOR_ENV: dev
+    VWADAPTOR_HOST: 0.0.0.0
+    VWADAPTOR_JWT_AUTH_HEADER_PREFIX: Bearer
+    VWADAPTOR_JWT_SECRET_KEY: wcwave
+    VWADAPTOR_PORT: '80'
+    VWADAPTOR_SECRET: vwadaptor
+    VWADAPTOR_SQLALCHEMY_DATABASE_URI: sqlite:////vwdb/vwadaptor.db
+    VWADAPTOR_STORAGE_CONTAINER: /vwstorage
+    VWADAPTOR_STORAGE_EXTENSIONS: nc,control
+    VWADAPTOR_STORAGE_KEY: ''''''
+    VWADAPTOR_STORAGE_PROVIDER: LOCAL
+    VWADAPTOR_STORAGE_SECRET: ''''''
+    VWADAPTOR_STORAGE_SERVER: 'true'
+    VWADAPTOR_STORAGE_SERVER_URL: /download
+    VWADAPTOR_USER_DATABASE_URI: sqlite:////vwauthdb/vwauth.db
+  log_driver: ''
+  command:
+  - celery
+  - -A
+  - worker.modelworker
+  - worker
+  - --loglevel=info
+  - --autoreload
+  log_opt: {}
+  image: virtualwatershed/vwadaptor:1.0.0
+  links:
+  - redis:redis
+  volumes:
+  - /storage:/vwstorage
+  - /vwdb:/vwdb
+  - /vwauthdb:/vwauthdb
+vwmail:
+  labels:
+  - io.rancher.container.network=true
+  ports:
+  - 1080:80/tcp
+  command:
+  - bin/maildev
+  - --web
+  - '80'
+  - --smtp
+  - '25'
+  - --verbose
+  image: djfarrelly/maildev
