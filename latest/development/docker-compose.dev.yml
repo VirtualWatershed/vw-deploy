@@ -1,0 +1,75 @@
+version: '2'
+services:
+  vwadaptor:
+    extends:
+      file: ./docker-compose.yml
+      service: vwadaptor
+    env_file: ./.env.dev
+
+    volumes:
+      # The volumes are the key for communcication between services in local env
+      - /storage:/vwstorage # This is where vwadaptor pushes the resources
+      - /vwdb:/vwdb # this where the database for vwadaptor is
+      - /vwauthdb:/vwauthdb # This is where the database for vwauth is
+      # To allow live dev while running the container
+      # This should be path the vwadaptor source code
+      # If using windows docker client, first copy the code to
+      # docker machine and then mount volume like follows
+      # - /home/docker/vwadaptor:/var/www/vwadaptor
+    depends_on:
+      - redis
+
+  vwworker:
+    extends:
+      file: ./docker-compose.yml
+      service: vwaworker
+    env_file: ./.env.dev
+    volumes_from:
+      - vwadaptor:rw
+    command: celery -A worker.modelworker worker --loglevel=info --autoreload
+    depends_on:
+      - redis
+
+  vwmonitor:
+    extends:
+      file: ./docker-compose.yml
+      service: vwmonitor
+    env_file: ./.env.dev
+    volumes_from:
+      - vwadaptor:rw
+      #- /storage:/vwstorage
+      # This should be path the vwadaptor source code
+      # If using windows docker client, first copy the code to
+      # docker machine and then mount volume like follows
+      #- /home/docker/vwadaptor:/var/www/vwadaptor
+    depends_on:
+      - redis
+
+  vwauth:
+    extends:
+      file: ./docker-compose.yml
+      service: vwauth
+    env_file: ./.env.dev
+    volumes:
+      - /vwauthdb:/vwauthdb
+      # For development thorugh mounting the source dir as a volume
+      # This should be path the vwadaptor source code
+      # If using windows docker client, first copy the code to
+      # docker machine and then mount volume like follows
+      #- /home/docker/vw-auth:/var/www/vw-auth
+    depends_on:
+      - vwmail
+    command: python manage.py runserver -h 0.0.0.0 -p 5005
+  vwmail:
+    extends:
+      file: ./docker-compose.yml
+      service: vwmail
+    command: bin/maildev --web 80 --smtp 25 --verbose
+    ports:
+      - "1080:80"
+
+  redis:
+    image: redis
+    volumes:
+      - /redis:/data
+    command: redis-server --appendonly yes
